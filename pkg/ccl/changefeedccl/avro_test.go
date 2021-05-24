@@ -753,106 +753,73 @@ func TestDecimalRatRoundtrip(t *testing.T) {
 	})
 }
 
-func benchmarkEncodeType(b *testing.B, typ *types.T, encRow rowenc.EncDatumRow) {
-	defer leaktest.AfterTest(b)()
-	defer log.Scope(b).Close(b)
-
-	tableDesc, err := parseTableDesc(
-		fmt.Sprintf(`CREATE TABLE bench_table (bench_field %s)`, typ.SQLString()))
-	require.NoError(b, err)
-	schema, err := tableToAvroSchema(tableDesc, "suffix", "namespace")
-	require.NoError(b, err)
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		_, err := schema.BinaryFromRow(nil, encRow)
-		require.NoError(b, err)
-	}
+func BenchmarkAvroEncodeIntArray(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.IntArray, randEncDatumRow(types.IntArray))
 }
 
-// returns random EncDatum row where the first column is of specified
-// type and the second one an types.Int, corresponding to a row id.
-func randEncDatumRow(typ *types.T) rowenc.EncDatumRow {
-	const allowNull = true
-	const notNull = false
-	rnd, _ := randutil.NewTestPseudoRand()
-	return rowenc.EncDatumRow{
-		rowenc.DatumToEncDatum(typ, randgen.RandDatum(rnd, typ, allowNull)),
-		rowenc.DatumToEncDatum(types.Int, randgen.RandDatum(rnd, types.Int, notNull)),
-	}
+func BenchmarkAvroEncodeInt(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.Int, randEncDatumRow(types.Int))
 }
 
-func BenchmarkEncodeIntArray(b *testing.B) {
-	benchmarkEncodeType(b, types.IntArray, randEncDatumRow(types.IntArray))
+func BenchmarkAvroEncodeBool(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.Bool, randEncDatumRow(types.Bool))
 }
 
-func BenchmarkEncodeInt(b *testing.B) {
-	benchmarkEncodeType(b, types.Int, randEncDatumRow(types.Int))
+func BenchmarkAvroEncodeFloat(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.Float, randEncDatumRow(types.Float))
 }
 
-func BenchmarkEncodeBool(b *testing.B) {
-	benchmarkEncodeType(b, types.Bool, randEncDatumRow(types.Bool))
+func BenchmarkAvroEncodeBox2D(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.Box2D, randEncDatumRow(types.Box2D))
 }
 
-func BenchmarkEncodeFloat(b *testing.B) {
-	benchmarkEncodeType(b, types.Float, randEncDatumRow(types.Float))
+func BenchmarkAvroEncodeGeography(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.Geography, randEncDatumRow(types.Geography))
 }
 
-func BenchmarkEncodeBox2D(b *testing.B) {
-	benchmarkEncodeType(b, types.Box2D, randEncDatumRow(types.Box2D))
+func BenchmarkAvroEncodeGeometry(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.Geometry, randEncDatumRow(types.Geometry))
 }
 
-func BenchmarkEncodeGeography(b *testing.B) {
-	benchmarkEncodeType(b, types.Geography, randEncDatumRow(types.Geography))
+func BenchmarkAvroEncodeBytes(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.Bytes, randEncDatumRow(types.Bytes))
 }
 
-func BenchmarkEncodeGeometry(b *testing.B) {
-	benchmarkEncodeType(b, types.Geometry, randEncDatumRow(types.Geometry))
+func BenchmarkAvroEncodeString(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.String, randEncDatumRow(types.String))
 }
 
-func BenchmarkEncodeBytes(b *testing.B) {
-	benchmarkEncodeType(b, types.Bytes, randEncDatumRow(types.Bytes))
+func BenchmarkAvroEncodeCollatedString(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, collatedStringType, randEncDatumRow(collatedStringType))
 }
 
-func BenchmarkEncodeString(b *testing.B) {
-	benchmarkEncodeType(b, types.String, randEncDatumRow(types.String))
-}
-
-var collatedStringType *types.T = types.MakeCollatedString(types.String, `fr`)
-
-func BenchmarkEncodeCollatedString(b *testing.B) {
-	benchmarkEncodeType(b, collatedStringType, randEncDatumRow(collatedStringType))
-}
-
-func BenchmarkEncodeDate(b *testing.B) {
+func BenchmarkAvroEncodeDate(b *testing.B) {
 	// RandDatum could return "interesting" dates (infinite past, etc).  Alas, avro
 	// doesn't support those yet, so override it to something we do support.
 	encRow := randEncDatumRow(types.Date)
 	if d, ok := encRow[0].Datum.(*tree.DDate); ok && !d.IsFinite() {
 		d.Date = pgdate.LowDate
 	}
-	benchmarkEncodeType(b, types.Date, encRow)
+	avroBenchmark.benchmarkEncodeType(b, types.Date, encRow)
 }
 
-func BenchmarkEncodeTime(b *testing.B) {
-	benchmarkEncodeType(b, types.Time, randEncDatumRow(types.Time))
+func BenchmarkAvroEncodeTime(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.Time, randEncDatumRow(types.Time))
 }
 
-func BenchmarkEncodeTimeTZ(b *testing.B) {
-	benchmarkEncodeType(b, types.TimeTZ, randEncDatumRow(types.TimeTZ))
+func BenchmarkAvroEncodeTimeTZ(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.TimeTZ, randEncDatumRow(types.TimeTZ))
 }
 
-func BenchmarkEncodeTimestamp(b *testing.B) {
-	benchmarkEncodeType(b, types.Timestamp, randEncDatumRow(types.Timestamp))
+func BenchmarkAvroEncodeTimestamp(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.Timestamp, randEncDatumRow(types.Timestamp))
 }
 
-func BenchmarkEncodeTimestampTZ(b *testing.B) {
-	benchmarkEncodeType(b, types.TimestampTZ, randEncDatumRow(types.TimestampTZ))
+func BenchmarkAvroEncodeTimestampTZ(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.TimestampTZ, randEncDatumRow(types.TimestampTZ))
 }
 
-func BenchmarkEncodeDecimal(b *testing.B) {
+func BenchmarkAvroEncodeDecimal(b *testing.B) {
 	typ := types.MakeDecimal(10, 4)
 	encRow := randEncDatumRow(typ)
 
@@ -862,17 +829,17 @@ func BenchmarkEncodeDecimal(b *testing.B) {
 	coeff := int64(rand.Uint64()) % 10000
 	d.Decimal.SetFinite(coeff, 2)
 	encRow[0] = rowenc.DatumToEncDatum(typ, d)
-	benchmarkEncodeType(b, typ, encRow)
+	avroBenchmark.benchmarkEncodeType(b, typ, encRow)
 }
 
-func BenchmarkEncodeUUID(b *testing.B) {
-	benchmarkEncodeType(b, types.Uuid, randEncDatumRow(types.Uuid))
+func BenchmarkAvroEncodeUUID(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.Uuid, randEncDatumRow(types.Uuid))
 }
 
-func BenchmarkEncodeINet(b *testing.B) {
-	benchmarkEncodeType(b, types.INet, randEncDatumRow(types.INet))
+func BenchmarkAvroEncodeINet(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.INet, randEncDatumRow(types.INet))
 }
 
-func BenchmarkEncodeJSON(b *testing.B) {
-	benchmarkEncodeType(b, types.Jsonb, randEncDatumRow(types.Jsonb))
+func BenchmarkAvroEncodeJSON(b *testing.B) {
+	avroBenchmark.benchmarkEncodeType(b, types.Jsonb, randEncDatumRow(types.Jsonb))
 }
